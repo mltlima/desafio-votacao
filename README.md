@@ -17,6 +17,8 @@ A aplicacao foi desenvolvida em Java 17 com Spring Boot, persistencia em Postgre
 - JUnit 5, Mockito, Spring Boot Test e MockMvc
 - springdoc-openapi / Swagger UI
 - Docker Compose
+- GitHub Actions
+- JaCoCo
 - Maven Wrapper
 
 ## Pre-requisitos
@@ -29,10 +31,36 @@ Nao e necessario ter Maven instalado localmente, pois o projeto usa Maven Wrappe
 
 ## Como Executar Localmente
 
+### Opcao A: Docker Completo
+
+Suba a aplicacao e o PostgreSQL com Docker Compose:
+
+```powershell
+docker compose up --build
+```
+
+A API ficara disponivel em:
+
+```text
+http://localhost:8080
+```
+
+Nesse modo, a aplicacao roda dentro da rede Docker e conecta no banco pelo servico `postgres` na porta interna `5432`.
+
+O PostgreSQL tambem fica acessivel no host para inspecao local:
+
+```text
+jdbc:postgresql://localhost:5433/votacao
+user: votacao
+password: votacao
+```
+
+### Opcao B: PostgreSQL No Docker E Aplicacao Local
+
 Suba o PostgreSQL:
 
 ```powershell
-docker compose up -d
+docker compose up -d postgres
 ```
 
 Execute a aplicacao:
@@ -80,6 +108,34 @@ No profile `test`, a aplicacao usa H2 em modo PostgreSQL, Flyway habilitado e JP
 ```powershell
 .\mvnw.cmd clean test
 ```
+
+## Relatorio De Cobertura JaCoCo
+
+Para gerar o relatorio de cobertura:
+
+```powershell
+.\mvnw.cmd clean verify
+```
+
+O relatorio HTML sera gerado em:
+
+```text
+target/site/jacoco/index.html
+```
+
+Nao ha threshold obrigatorio de cobertura nesta entrega; o objetivo e disponibilizar o relatorio como ferramenta de qualidade.
+
+## CI
+
+O projeto possui workflow de GitHub Actions em `.github/workflows/ci.yml`.
+
+O CI roda automaticamente em `push` e `pull_request`, usando Java 17 e o comando:
+
+```bash
+./mvnw clean test
+```
+
+Os testes do CI nao dependem de Docker, pois o profile `test` usa H2 em modo PostgreSQL.
 
 ## URLs Uteis
 
@@ -368,6 +424,9 @@ Mudancas futuras incompativeis devem ser publicadas em uma nova versao, por exem
 - `@RestControllerAdvice` padroniza erros da API.
 - Swagger/OpenAPI e gerado automaticamente com springdoc.
 - Logs foram adicionados nos principais fluxos de negocio.
+- Dockerfile multi-stage gera a imagem da aplicacao com Java 17.
+- GitHub Actions executa os testes automaticamente a cada push ou pull request.
+- JaCoCo gera relatorio de cobertura em `target/site/jacoco`.
 
 ## Possiveis Melhorias Futuras
 
@@ -375,7 +434,6 @@ Mudancas futuras incompativeis devem ser publicadas em uma nova versao, por exem
 - Integracao real com servico de CPF/elegibilidade.
 - Observabilidade com metricas e tracing.
 - Testes de performance/carga.
-- Pipeline CI.
 - Versionamento `/api/v2` para mudancas incompativeis.
 - Endpoints de listagem/consulta de pautas, se o produto exigir.
 
@@ -387,9 +445,21 @@ Rodar testes:
 .\mvnw.cmd clean test
 ```
 
-Validar aplicacao localmente:
+Gerar relatorio de cobertura:
 
 ```powershell
-docker compose up -d
+.\mvnw.cmd clean verify
+```
+
+Validar Docker completo:
+
+```powershell
+docker compose up --build
+```
+
+Validar fluxo com PostgreSQL no Docker e aplicacao local:
+
+```powershell
+docker compose up -d postgres
 .\mvnw.cmd spring-boot:run
 ```
