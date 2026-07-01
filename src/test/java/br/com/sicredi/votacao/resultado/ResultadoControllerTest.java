@@ -1,14 +1,13 @@
 package br.com.sicredi.votacao.resultado;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.resultado.dto.ResultadoResponse;
 import org.junit.jupiter.api.Test;
 import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.util.UUID;
 
@@ -53,9 +52,13 @@ class ResultadoControllerTest {
     void deveRefletirNotFoundLancadoPeloService() throws Exception {
         UUID pautaId = UUID.randomUUID();
         Mockito.when(resultadoService.consultar(pautaId))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta nao encontrada"));
+                .thenThrow(new PautaNaoEncontradaException());
 
         mockMvc.perform(get("/api/v1/pautas/{pautaId}/resultado", pautaId))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Pauta nao encontrada"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/resultado"));
     }
 }

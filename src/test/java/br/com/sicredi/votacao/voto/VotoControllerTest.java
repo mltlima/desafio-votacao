@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.voto;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
+import br.com.sicredi.votacao.common.exception.VotoDuplicadoException;
 import br.com.sicredi.votacao.voto.dto.RegistrarVotoRequest;
 import br.com.sicredi.votacao.voto.dto.VotoResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,10 +10,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -66,7 +66,9 @@ class VotoControllerTest {
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test
@@ -76,7 +78,9 @@ class VotoControllerTest {
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test
@@ -86,7 +90,9 @@ class VotoControllerTest {
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test
@@ -99,30 +105,41 @@ class VotoControllerTest {
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", UUID.randomUUID())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("Requisicao invalida"));
     }
 
     @Test
     void deveRefletirNotFoundLancadoPeloService() throws Exception {
         UUID pautaId = UUID.randomUUID();
         Mockito.when(votoService.registrar(eq(pautaId), any(RegistrarVotoRequest.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta nao encontrada"));
+                .thenThrow(new PautaNaoEncontradaException());
 
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Pauta nao encontrada"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/votos"));
     }
 
     @Test
     void deveRefletirConflictLancadoPeloService() throws Exception {
         UUID pautaId = UUID.randomUUID();
         Mockito.when(votoService.registrar(eq(pautaId), any(RegistrarVotoRequest.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Associado ja votou nesta pauta"));
+                .thenThrow(new VotoDuplicadoException());
 
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("Associado ja votou nesta pauta"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/votos"));
     }
 }

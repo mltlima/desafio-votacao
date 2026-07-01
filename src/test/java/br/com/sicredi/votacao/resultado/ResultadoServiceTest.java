@@ -1,5 +1,6 @@
 package br.com.sicredi.votacao.resultado;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.pauta.Pauta;
 import br.com.sicredi.votacao.pauta.PautaRepository;
 import br.com.sicredi.votacao.resultado.dto.ResultadoResponse;
@@ -13,8 +14,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -58,8 +57,8 @@ class ResultadoServiceTest {
         when(pautaRepository.existsById(pautaId)).thenReturn(false);
 
         assertThatThrownBy(() -> resultadoService.consultar(pautaId))
-                .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+                .isInstanceOf(PautaNaoEncontradaException.class)
+                .hasMessage("Pauta nao encontrada");
     }
 
     @Test

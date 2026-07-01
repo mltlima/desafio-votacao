@@ -1,5 +1,9 @@
 package br.com.sicredi.votacao.voto;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
+import br.com.sicredi.votacao.common.exception.SessaoFechadaException;
+import br.com.sicredi.votacao.common.exception.SessaoNaoEncontradaException;
+import br.com.sicredi.votacao.common.exception.VotoDuplicadoException;
 import br.com.sicredi.votacao.pauta.Pauta;
 import br.com.sicredi.votacao.pauta.PautaRepository;
 import br.com.sicredi.votacao.sessao.SessaoRepository;
@@ -13,8 +17,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -112,8 +114,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+        )).isInstanceOf(PautaNaoEncontradaException.class)
+                .hasMessage("Pauta nao encontrada");
 
         verify(votoRepository, never()).save(any(Voto.class));
     }
@@ -127,8 +129,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        )).isInstanceOf(SessaoNaoEncontradaException.class)
+                .hasMessage("Sessao de votacao nao aberta");
 
         verify(votoRepository, never()).save(any(Voto.class));
     }
@@ -143,8 +145,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        )).isInstanceOf(SessaoFechadaException.class)
+                .hasMessage("Sessao de votacao nao esta aberta");
 
         verify(votoRepository, never()).save(any(Voto.class));
     }
@@ -159,8 +161,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        )).isInstanceOf(SessaoFechadaException.class)
+                .hasMessage("Sessao de votacao nao esta aberta");
 
         verify(votoRepository, never()).save(any(Voto.class));
     }
@@ -176,8 +178,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        )).isInstanceOf(VotoDuplicadoException.class)
+                .hasMessage("Associado ja votou nesta pauta");
 
         verify(votoRepository, never()).save(any(Voto.class));
     }
@@ -195,8 +197,8 @@ class VotoServiceTest {
         assertThatThrownBy(() -> votoService.registrar(
                 pautaId,
                 new RegistrarVotoRequest("associado-123", OpcaoVoto.SIM)
-        )).isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+        )).isInstanceOf(VotoDuplicadoException.class)
+                .hasMessage("Associado ja votou nesta pauta");
     }
 
     private Pauta criarPauta(UUID pautaId) {

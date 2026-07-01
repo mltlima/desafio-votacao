@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.sessao;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
+import br.com.sicredi.votacao.common.exception.SessaoJaAbertaException;
 import br.com.sicredi.votacao.sessao.dto.AbrirSessaoRequest;
 import br.com.sicredi.votacao.sessao.dto.SessaoResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -8,10 +10,8 @@ import org.mockito.Mockito;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDateTime;
 import java.util.UUID;
@@ -95,30 +95,42 @@ class SessaoControllerTest {
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/sessoes", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("duracaoEmMinutos: must be greater than 0"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/sessoes"));
     }
 
     @Test
     void deveRefletirNotFoundLancadoPeloService() throws Exception {
         UUID pautaId = UUID.randomUUID();
         Mockito.when(sessaoService.abrir(eq(pautaId), any(AbrirSessaoRequest.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta nao encontrada"));
+                .thenThrow(new PautaNaoEncontradaException());
 
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/sessoes", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AbrirSessaoRequest(10))))
-                .andExpect(status().isNotFound());
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("Pauta nao encontrada"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/sessoes"));
     }
 
     @Test
     void deveRefletirConflictLancadoPeloService() throws Exception {
         UUID pautaId = UUID.randomUUID();
         Mockito.when(sessaoService.abrir(eq(pautaId), any(AbrirSessaoRequest.class)))
-                .thenThrow(new ResponseStatusException(HttpStatus.CONFLICT, "Sessao ja aberta para esta pauta"));
+                .thenThrow(new SessaoJaAbertaException());
 
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/sessoes", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(new AbrirSessaoRequest(10))))
-                .andExpect(status().isConflict());
+                .andExpect(status().isConflict())
+                .andExpect(jsonPath("$.status").value(409))
+                .andExpect(jsonPath("$.error").value("Conflict"))
+                .andExpect(jsonPath("$.message").value("Sessao ja aberta para esta pauta"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/sessoes"));
     }
 }

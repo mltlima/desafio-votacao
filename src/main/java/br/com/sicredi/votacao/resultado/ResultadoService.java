@@ -1,5 +1,6 @@
 package br.com.sicredi.votacao.resultado;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.pauta.PautaRepository;
 import br.com.sicredi.votacao.resultado.dto.ResultadoResponse;
 import br.com.sicredi.votacao.sessao.SessaoRepository;
@@ -7,10 +8,10 @@ import br.com.sicredi.votacao.sessao.SessaoVotacao;
 import br.com.sicredi.votacao.voto.ContagemVotos;
 import br.com.sicredi.votacao.voto.OpcaoVoto;
 import br.com.sicredi.votacao.voto.VotoRepository;
-import org.springframework.http.HttpStatus;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.LocalDateTime;
@@ -18,6 +19,8 @@ import java.util.UUID;
 
 @Service
 public class ResultadoService {
+
+    private static final Logger LOGGER = LoggerFactory.getLogger(ResultadoService.class);
 
     private final PautaRepository pautaRepository;
     private final SessaoRepository sessaoRepository;
@@ -39,14 +42,26 @@ public class ResultadoService {
     @Transactional(readOnly = true)
     public ResultadoResponse consultar(UUID pautaId) {
         if (!pautaRepository.existsById(pautaId)) {
-            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "Pauta nao encontrada");
+            throw new PautaNaoEncontradaException();
         }
 
         ContagemVotos contagem = votoRepository.contarVotosPorPauta(pautaId, OpcaoVoto.SIM, OpcaoVoto.NAO);
 
-        return sessaoRepository.findByPauta_Id(pautaId)
+        ResultadoResponse response = sessaoRepository.findByPauta_Id(pautaId)
                 .map(sessao -> montarResultadoComSessao(pautaId, sessao, contagem))
                 .orElseGet(() -> montarResultadoNaoIniciado(pautaId, contagem));
+
+        LOGGER.info(
+                "Resultado consultado: pautaId={}, status={}, totalVotos={}, votosSim={}, votosNao={}, resultado={}",
+                pautaId,
+                response.status(),
+                response.totalVotos(),
+                response.votosSim(),
+                response.votosNao(),
+                response.resultado()
+        );
+
+        return response;
     }
 
     private ResultadoResponse montarResultadoComSessao(UUID pautaId, SessaoVotacao sessao, ContagemVotos contagem) {

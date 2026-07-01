@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.sessao;
 
+import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
+import br.com.sicredi.votacao.common.exception.SessaoJaAbertaException;
 import br.com.sicredi.votacao.pauta.Pauta;
 import br.com.sicredi.votacao.pauta.PautaRepository;
 import br.com.sicredi.votacao.sessao.dto.AbrirSessaoRequest;
@@ -11,8 +13,6 @@ import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.dao.DataIntegrityViolationException;
-import org.springframework.http.HttpStatus;
-import org.springframework.web.server.ResponseStatusException;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -99,8 +99,8 @@ class SessaoServiceTest {
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.empty());
 
         assertThatThrownBy(() -> sessaoService.abrir(pautaId, new AbrirSessaoRequest(10)))
-                .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
+                .isInstanceOf(PautaNaoEncontradaException.class)
+                .hasMessage("Pauta nao encontrada");
 
         verify(sessaoRepository, never()).save(any(SessaoVotacao.class));
     }
@@ -112,8 +112,8 @@ class SessaoServiceTest {
         when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(true);
 
         assertThatThrownBy(() -> sessaoService.abrir(pautaId, new AbrirSessaoRequest(10)))
-                .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+                .isInstanceOf(SessaoJaAbertaException.class)
+                .hasMessage("Sessao ja aberta para esta pauta");
 
         verify(sessaoRepository, never()).save(any(SessaoVotacao.class));
     }
@@ -127,8 +127,8 @@ class SessaoServiceTest {
                 .thenThrow(new DataIntegrityViolationException("uk_sessoes_votacao_pauta"));
 
         assertThatThrownBy(() -> sessaoService.abrir(pautaId, new AbrirSessaoRequest(10)))
-                .isInstanceOfSatisfying(ResponseStatusException.class, exception ->
-                        assertThat(exception.getStatusCode()).isEqualTo(HttpStatus.CONFLICT));
+                .isInstanceOf(SessaoJaAbertaException.class)
+                .hasMessage("Sessao ja aberta para esta pauta");
     }
 
     private Pauta criarPauta(UUID pautaId) {

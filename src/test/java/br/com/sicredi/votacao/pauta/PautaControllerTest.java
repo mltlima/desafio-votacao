@@ -60,7 +60,11 @@ class PautaControllerTest {
         mockMvc.perform(post("/api/v1/pautas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"))
+                .andExpect(jsonPath("$.message").value("titulo: must not be blank"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas"));
     }
 
     @Test
@@ -70,7 +74,9 @@ class PautaControllerTest {
         mockMvc.perform(post("/api/v1/pautas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 
     @Test
@@ -80,6 +86,8 @@ class PautaControllerTest {
         mockMvc.perform(post("/api/v1/pautas")
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
-                .andExpect(status().isBadRequest());
+                .andExpect(status().isBadRequest())
+                .andExpect(jsonPath("$.status").value(400))
+                .andExpect(jsonPath("$.error").value("Bad Request"));
     }
 }
