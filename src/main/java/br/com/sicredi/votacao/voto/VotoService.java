@@ -1,5 +1,10 @@
 package br.com.sicredi.votacao.voto;
 
+import br.com.sicredi.votacao.associado.AssociadoElegibilidadeClient;
+import br.com.sicredi.votacao.associado.ElegibilidadeAssociado;
+import br.com.sicredi.votacao.associado.StatusElegibilidade;
+import br.com.sicredi.votacao.common.exception.AssociadoNaoPodeVotarException;
+import br.com.sicredi.votacao.common.exception.CpfInvalidoException;
 import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.common.exception.SessaoFechadaException;
 import br.com.sicredi.votacao.common.exception.SessaoNaoEncontradaException;
@@ -28,17 +33,20 @@ public class VotoService {
     private final VotoRepository votoRepository;
     private final PautaRepository pautaRepository;
     private final SessaoRepository sessaoRepository;
+    private final AssociadoElegibilidadeClient associadoElegibilidadeClient;
     private final Clock clock;
 
     public VotoService(
             VotoRepository votoRepository,
             PautaRepository pautaRepository,
             SessaoRepository sessaoRepository,
+            AssociadoElegibilidadeClient associadoElegibilidadeClient,
             Clock clock
     ) {
         this.votoRepository = votoRepository;
         this.pautaRepository = pautaRepository;
         this.sessaoRepository = sessaoRepository;
+        this.associadoElegibilidadeClient = associadoElegibilidadeClient;
         this.clock = clock;
     }
 
@@ -69,6 +77,17 @@ public class VotoService {
         if (votoRepository.existsByPauta_IdAndAssociadoId(pautaId, request.associadoId())) {
             LOGGER.warn("Tentativa de voto duplicado: pautaId={}, associadoId={}", pautaId, request.associadoId());
             throw new VotoDuplicadoException();
+        }
+
+        ElegibilidadeAssociado elegibilidade = associadoElegibilidadeClient.consultar(request.associadoId());
+        if (!elegibilidade.cpfValido()) {
+            LOGGER.warn("Tentativa de voto com CPF invalido: pautaId={}, associadoId={}", pautaId, request.associadoId());
+            throw new CpfInvalidoException();
+        }
+
+        if (elegibilidade.status() != StatusElegibilidade.ABLE_TO_VOTE) {
+            LOGGER.warn("Associado nao pode votar: pautaId={}, associadoId={}", pautaId, request.associadoId());
+            throw new AssociadoNaoPodeVotarException();
         }
 
         Voto voto = new Voto(

@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.common.error;
 
+import br.com.sicredi.votacao.common.exception.AssociadoNaoPodeVotarException;
+import br.com.sicredi.votacao.common.exception.CpfInvalidoException;
 import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.common.exception.SessaoFechadaException;
 import br.com.sicredi.votacao.common.exception.SessaoJaAbertaException;
@@ -67,6 +69,22 @@ public class GlobalExceptionHandler {
             HttpServletRequest request
     ) {
         return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(CpfInvalidoException.class)
+    public ResponseEntity<ApiErrorResponse> handleCpfInvalido(
+            CpfInvalidoException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.NOT_FOUND, exception.getMessage(), request);
+    }
+
+    @ExceptionHandler(AssociadoNaoPodeVotarException.class)
+    public ResponseEntity<ApiErrorResponse> handleAssociadoNaoPodeVotar(
+            AssociadoNaoPodeVotarException exception,
+            HttpServletRequest request
+    ) {
+        return buildResponse(HttpStatus.FORBIDDEN, exception.getMessage(), request);
     }
 
     @ExceptionHandler({

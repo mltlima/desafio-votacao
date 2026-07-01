@@ -62,8 +62,8 @@ class FluxoVotacaoIntegrationTest {
 
         abrirSessaoViaApi(pautaId, 10);
 
-        registrarVotoViaApi(pautaId, "associado-sim", "SIM");
-        registrarVotoViaApi(pautaId, "associado-nao", "NAO");
+        registrarVotoViaApi(pautaId, "22222222222", "SIM");
+        registrarVotoViaApi(pautaId, "33333333333", "NAO");
 
         mockMvc.perform(get("/api/v1/pautas/{pautaId}/resultado", pautaId))
                 .andExpect(status().isOk())
@@ -99,17 +99,51 @@ class FluxoVotacaoIntegrationTest {
         String pautaId = pauta.get("id").asText();
         abrirSessaoViaApi(pautaId, 10);
 
-        registrarVotoViaApi(pautaId, "associado-duplicado", "SIM");
+        registrarVotoViaApi(pautaId, "22222222222", "SIM");
 
         mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(Map.of(
-                                "associadoId", "associado-duplicado",
+                                "associadoId", "22222222222",
                                 "opcao", "NAO"
                         ))))
                 .andExpect(status().isConflict())
                 .andExpect(jsonPath("$.status").value(409))
                 .andExpect(jsonPath("$.message").value("Associado ja votou nesta pauta"));
+    }
+
+    @Test
+    void deveRetornarNotFoundQuandoCpfForInvalidoNoRegistroDeVoto() throws Exception {
+        JsonNode pauta = criarPautaViaApi("Pauta CPF invalido", "Validacao de elegibilidade");
+        String pautaId = pauta.get("id").asText();
+        abrirSessaoViaApi(pautaId, 10);
+
+        mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "associadoId", "00000000000",
+                                "opcao", "SIM"
+                        ))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.message").value("CPF invalido"));
+    }
+
+    @Test
+    void deveRetornarForbiddenQuandoAssociadoNaoPodeVotar() throws Exception {
+        JsonNode pauta = criarPautaViaApi("Pauta associado inapto", "Validacao de elegibilidade");
+        String pautaId = pauta.get("id").asText();
+        abrirSessaoViaApi(pautaId, 10);
+
+        mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(Map.of(
+                                "associadoId", "11111111111",
+                                "opcao", "SIM"
+                        ))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.message").value("Associado nao pode votar"));
     }
 
     @Test

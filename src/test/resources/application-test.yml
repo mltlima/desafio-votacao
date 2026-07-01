@@ -11,3 +11,15 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+
+votacao:
+  elegibilidade:
+    random-enabled: false
+    cpfs-invalidos:
+      - "00000000000"
+    cpfs-unable:
+      - "11111111111"
+    cpfs-able:
+      - "22222222222"
+      - "33333333333"
+      - "44444444444"

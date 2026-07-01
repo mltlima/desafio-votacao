@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.voto;
 
+import br.com.sicredi.votacao.common.exception.AssociadoNaoPodeVotarException;
+import br.com.sicredi.votacao.common.exception.CpfInvalidoException;
 import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.common.exception.VotoDuplicadoException;
 import br.com.sicredi.votacao.voto.dto.RegistrarVotoRequest;
@@ -124,6 +126,38 @@ class VotoControllerTest {
                 .andExpect(jsonPath("$.status").value(404))
                 .andExpect(jsonPath("$.error").value("Not Found"))
                 .andExpect(jsonPath("$.message").value("Pauta nao encontrada"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/votos"));
+    }
+
+    @Test
+    void deveRefletirNotFoundQuandoCpfForInvalido() throws Exception {
+        UUID pautaId = UUID.randomUUID();
+        Mockito.when(votoService.registrar(eq(pautaId), any(RegistrarVotoRequest.class)))
+                .thenThrow(new CpfInvalidoException());
+
+        mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RegistrarVotoRequest("00000000000", OpcaoVoto.SIM))))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("CPF invalido"))
+                .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/votos"));
+    }
+
+    @Test
+    void deveRefletirForbiddenQuandoAssociadoNaoPodeVotar() throws Exception {
+        UUID pautaId = UUID.randomUUID();
+        Mockito.when(votoService.registrar(eq(pautaId), any(RegistrarVotoRequest.class)))
+                .thenThrow(new AssociadoNaoPodeVotarException());
+
+        mockMvc.perform(post("/api/v1/pautas/{pautaId}/votos", pautaId)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content(objectMapper.writeValueAsString(new RegistrarVotoRequest("11111111111", OpcaoVoto.SIM))))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("Associado nao pode votar"))
                 .andExpect(jsonPath("$.path").value("/api/v1/pautas/" + pautaId + "/votos"));
     }
 

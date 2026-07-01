@@ -1,5 +1,7 @@
 package br.com.sicredi.votacao.common.error;
 
+import br.com.sicredi.votacao.common.exception.AssociadoNaoPodeVotarException;
+import br.com.sicredi.votacao.common.exception.CpfInvalidoException;
 import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.common.exception.SessaoFechadaException;
 import br.com.sicredi.votacao.common.exception.SessaoJaAbertaException;
@@ -101,6 +103,26 @@ class GlobalExceptionHandlerTest {
     }
 
     @Test
+    void deveRetornarNotFoundParaCpfInvalido() throws Exception {
+        mockMvc.perform(get("/handler/cpf-invalido"))
+                .andExpect(status().isNotFound())
+                .andExpect(jsonPath("$.status").value(404))
+                .andExpect(jsonPath("$.error").value("Not Found"))
+                .andExpect(jsonPath("$.message").value("CPF invalido"))
+                .andExpect(jsonPath("$.path").value("/handler/cpf-invalido"));
+    }
+
+    @Test
+    void deveRetornarForbiddenParaAssociadoSemPermissaoDeVoto() throws Exception {
+        mockMvc.perform(get("/handler/associado-nao-pode-votar"))
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.status").value(403))
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value("Associado nao pode votar"))
+                .andExpect(jsonPath("$.path").value("/handler/associado-nao-pode-votar"));
+    }
+
+    @Test
     void deveRetornarConflictParaSessaoJaAberta() throws Exception {
         mockMvc.perform(get("/handler/sessao-ja-aberta"))
                 .andExpect(status().isConflict())
@@ -173,6 +195,16 @@ class GlobalExceptionHandlerTest {
         @GetMapping("/pauta-nao-encontrada")
         void pautaNaoEncontrada() {
             throw new PautaNaoEncontradaException();
+        }
+
+        @GetMapping("/cpf-invalido")
+        void cpfInvalido() {
+            throw new CpfInvalidoException();
+        }
+
+        @GetMapping("/associado-nao-pode-votar")
+        void associadoNaoPodeVotar() {
+            throw new AssociadoNaoPodeVotarException();
         }
 
         @GetMapping("/sessao-ja-aberta")

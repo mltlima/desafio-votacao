@@ -1,5 +1,9 @@
 package br.com.sicredi.votacao.voto;
 
+import br.com.sicredi.votacao.associado.AssociadoElegibilidadeClient;
+import br.com.sicredi.votacao.associado.ElegibilidadeAssociado;
+import br.com.sicredi.votacao.common.exception.AssociadoNaoPodeVotarException;
+import br.com.sicredi.votacao.common.exception.CpfInvalidoException;
 import br.com.sicredi.votacao.common.exception.PautaNaoEncontradaException;
 import br.com.sicredi.votacao.common.exception.SessaoFechadaException;
 import br.com.sicredi.votacao.common.exception.SessaoNaoEncontradaException;
@@ -49,11 +53,20 @@ class VotoServiceTest {
     @Mock
     private SessaoRepository sessaoRepository;
 
+    @Mock
+    private AssociadoElegibilidadeClient associadoElegibilidadeClient;
+
     private VotoService votoService;
 
     @BeforeEach
     void setUp() {
-        votoService = new VotoService(votoRepository, pautaRepository, sessaoRepository, FIXED_CLOCK);
+        votoService = new VotoService(
+                votoRepository,
+                pautaRepository,
+                sessaoRepository,
+                associadoElegibilidadeClient,
+                FIXED_CLOCK
+        );
     }
 
     @Test
@@ -63,6 +76,7 @@ class VotoServiceTest {
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
         when(sessaoRepository.findByPauta_Id(pautaId)).thenReturn(Optional.of(criarSessaoAberta(pauta)));
         when(votoRepository.existsByPauta_IdAndAssociadoId(pautaId, "associado-123")).thenReturn(false);
+        when(associadoElegibilidadeClient.consultar("associado-123")).thenReturn(ElegibilidadeAssociado.apto());
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         VotoResponse response = votoService.registrar(
@@ -95,6 +109,7 @@ class VotoServiceTest {
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
         when(sessaoRepository.findByPauta_Id(pautaId)).thenReturn(Optional.of(criarSessaoAberta(pauta)));
         when(votoRepository.existsByPauta_IdAndAssociadoId(pautaId, "associado-123")).thenReturn(false);
+        when(associadoElegibilidadeClient.consultar("associado-123")).thenReturn(ElegibilidadeAssociado.apto());
         when(votoRepository.save(any(Voto.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         VotoResponse response = votoService.registrar(
@@ -117,6 +132,7 @@ class VotoServiceTest {
         )).isInstanceOf(PautaNaoEncontradaException.class)
                 .hasMessage("Pauta nao encontrada");
 
+        verify(associadoElegibilidadeClient, never()).consultar(any());
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
@@ -132,6 +148,7 @@ class VotoServiceTest {
         )).isInstanceOf(SessaoNaoEncontradaException.class)
                 .hasMessage("Sessao de votacao nao aberta");
 
+        verify(associadoElegibilidadeClient, never()).consultar(any());
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
@@ -148,6 +165,7 @@ class VotoServiceTest {
         )).isInstanceOf(SessaoFechadaException.class)
                 .hasMessage("Sessao de votacao nao esta aberta");
 
+        verify(associadoElegibilidadeClient, never()).consultar(any());
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
@@ -164,6 +182,7 @@ class VotoServiceTest {
         )).isInstanceOf(SessaoFechadaException.class)
                 .hasMessage("Sessao de votacao nao esta aberta");
 
+        verify(associadoElegibilidadeClient, never()).consultar(any());
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
@@ -181,6 +200,43 @@ class VotoServiceTest {
         )).isInstanceOf(VotoDuplicadoException.class)
                 .hasMessage("Associado ja votou nesta pauta");
 
+        verify(associadoElegibilidadeClient, never()).consultar(any());
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+
+    @Test
+    void deveRetornarNotFoundQuandoCpfForInvalido() {
+        UUID pautaId = UUID.randomUUID();
+        Pauta pauta = criarPauta(pautaId);
+        when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
+        when(sessaoRepository.findByPauta_Id(pautaId)).thenReturn(Optional.of(criarSessaoAberta(pauta)));
+        when(votoRepository.existsByPauta_IdAndAssociadoId(pautaId, "00000000000")).thenReturn(false);
+        when(associadoElegibilidadeClient.consultar("00000000000")).thenReturn(ElegibilidadeAssociado.cpfInvalido());
+
+        assertThatThrownBy(() -> votoService.registrar(
+                pautaId,
+                new RegistrarVotoRequest("00000000000", OpcaoVoto.SIM)
+        )).isInstanceOf(CpfInvalidoException.class)
+                .hasMessage("CPF invalido");
+
+        verify(votoRepository, never()).save(any(Voto.class));
+    }
+
+    @Test
+    void deveRetornarForbiddenQuandoAssociadoNaoPodeVotar() {
+        UUID pautaId = UUID.randomUUID();
+        Pauta pauta = criarPauta(pautaId);
+        when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
+        when(sessaoRepository.findByPauta_Id(pautaId)).thenReturn(Optional.of(criarSessaoAberta(pauta)));
+        when(votoRepository.existsByPauta_IdAndAssociadoId(pautaId, "11111111111")).thenReturn(false);
+        when(associadoElegibilidadeClient.consultar("11111111111")).thenReturn(ElegibilidadeAssociado.inapto());
+
+        assertThatThrownBy(() -> votoService.registrar(
+                pautaId,
+                new RegistrarVotoRequest("11111111111", OpcaoVoto.SIM)
+        )).isInstanceOf(AssociadoNaoPodeVotarException.class)
+                .hasMessage("Associado nao pode votar");
+
         verify(votoRepository, never()).save(any(Voto.class));
     }
 
@@ -191,6 +247,7 @@ class VotoServiceTest {
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
         when(sessaoRepository.findByPauta_Id(pautaId)).thenReturn(Optional.of(criarSessaoAberta(pauta)));
         when(votoRepository.existsByPauta_IdAndAssociadoId(pautaId, "associado-123")).thenReturn(false);
+        when(associadoElegibilidadeClient.consultar("associado-123")).thenReturn(ElegibilidadeAssociado.apto());
         when(votoRepository.save(any(Voto.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_votos_pauta_associado"));
 
