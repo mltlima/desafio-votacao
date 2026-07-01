@@ -7,7 +7,7 @@ import java.util.UUID;
 
 public interface SessaoRepository extends JpaRepository<SessaoVotacao, UUID> {
 
-    boolean existsByPautaId(UUID pautaId);
+    boolean existsByPauta_Id(UUID pautaId);
 
     Optional<SessaoVotacao> findByPauta_Id(UUID pautaId);
 }

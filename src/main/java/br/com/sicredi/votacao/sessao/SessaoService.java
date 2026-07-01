@@ -37,7 +37,7 @@ public class SessaoService {
         Pauta pauta = pautaRepository.findById(pautaId)
                 .orElseThrow(PautaNaoEncontradaException::new);
 
-        if (sessaoRepository.existsByPautaId(pautaId)) {
+        if (sessaoRepository.existsByPauta_Id(pautaId)) {
             LOGGER.warn("Tentativa de abrir sessao duplicada: pautaId={}", pautaId);
             throw new SessaoJaAbertaException();
         }

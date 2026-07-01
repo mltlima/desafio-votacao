@@ -346,6 +346,8 @@ O schema possui indice em `(pauta_id, opcao)`, apoiando a contagem por pauta e o
 
 As constraints unicas tambem funcionam como protecao final contra condicoes de corrida em cenarios concorrentes.
 
+Ha um teste de integracao com volume maior de votos validando essa estrategia de contagem agregada. Ele insere votos diretamente via repositories para focar na consulta de resultado, sem medir o fluxo completo de registro de voto nem prometer benchmark real de producao.
+
 ## Versionamento Da API
 
 A API e versionada por path:

@@ -7,6 +7,7 @@ import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Clock;
 import java.time.LocalDateTime;
 import java.util.UUID;
 
@@ -16,9 +17,11 @@ public class PautaService {
     private static final Logger LOGGER = LoggerFactory.getLogger(PautaService.class);
 
     private final PautaRepository pautaRepository;
+    private final Clock clock;
 
-    public PautaService(PautaRepository pautaRepository) {
+    public PautaService(PautaRepository pautaRepository, Clock clock) {
         this.pautaRepository = pautaRepository;
+        this.clock = clock;
     }
 
     @Transactional
@@ -27,7 +30,7 @@ public class PautaService {
                 UUID.randomUUID(),
                 request.titulo(),
                 request.descricao(),
-                LocalDateTime.now()
+                LocalDateTime.now(clock)
         );
 
         Pauta pautaSalva = pautaRepository.save(pauta);

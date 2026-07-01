@@ -54,7 +54,7 @@ class SessaoServiceTest {
         UUID pautaId = UUID.randomUUID();
         Pauta pauta = criarPauta(pautaId);
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(sessaoRepository.existsByPauta_Id(pautaId)).thenReturn(false);
         when(sessaoRepository.save(any(SessaoVotacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         SessaoResponse response = sessaoService.abrir(pautaId, null);
@@ -82,7 +82,7 @@ class SessaoServiceTest {
         UUID pautaId = UUID.randomUUID();
         Pauta pauta = criarPauta(pautaId);
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(pauta));
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(sessaoRepository.existsByPauta_Id(pautaId)).thenReturn(false);
         when(sessaoRepository.save(any(SessaoVotacao.class))).thenAnswer(invocation -> invocation.getArgument(0));
 
         SessaoResponse response = sessaoService.abrir(pautaId, new AbrirSessaoRequest(10));
@@ -109,7 +109,7 @@ class SessaoServiceTest {
     void deveRetornarConflictQuandoSessaoJaExistirParaPauta() {
         UUID pautaId = UUID.randomUUID();
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(criarPauta(pautaId)));
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(true);
+        when(sessaoRepository.existsByPauta_Id(pautaId)).thenReturn(true);
 
         assertThatThrownBy(() -> sessaoService.abrir(pautaId, new AbrirSessaoRequest(10)))
                 .isInstanceOf(SessaoJaAbertaException.class)
@@ -122,7 +122,7 @@ class SessaoServiceTest {
     void deveConverterViolacaoDeConstraintUnicaEmConflict() {
         UUID pautaId = UUID.randomUUID();
         when(pautaRepository.findById(pautaId)).thenReturn(Optional.of(criarPauta(pautaId)));
-        when(sessaoRepository.existsByPautaId(pautaId)).thenReturn(false);
+        when(sessaoRepository.existsByPauta_Id(pautaId)).thenReturn(false);
         when(sessaoRepository.save(any(SessaoVotacao.class)))
                 .thenThrow(new DataIntegrityViolationException("uk_sessoes_votacao_pauta"));
 
